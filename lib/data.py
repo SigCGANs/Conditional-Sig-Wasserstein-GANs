@@ -137,7 +137,7 @@ def get_arch_dataset(window_size, lag=4, bt=0.055, N=5000, dim=1):
                 logrtn[:, t - lag + 1:t + 1]).transpose())  # * (logrtn[:, t] < 0.)
             logrtn[:, t + 1] = np.sqrt(arch[:, t + 1]) * eps[:, t + 1]
         return arch[:, burn_in:], logrtn[:, burn_in:]
-
+                                                  
     pipeline = Pipeline(steps=[('standard_scale', StandardScalerTS(axis=(0, 1)))])
     _, logrtn = get_raw_data(T=window_size, N=N, bt=bt)
     data_raw = torch.from_numpy(logrtn[..., None]).float()

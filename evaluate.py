@@ -50,9 +50,11 @@ def compute_test_metrics(x_fake, x_real):
 def get_algo_config(dataset, experiment_dir):
     key = dataset
     if dataset == 'VAR':
-        key += experiment_dir.split('/')[2][4]
+        print(experiment_dir.split('/'))
+        key += experiment_dir.split('/')[3][4]
     elif dataset == 'STOCKS':
-        key += '_' + experiment_dir.split('/')[2]
+        print(experiment_dir.split('/'))
+        key += '_' + experiment_dir.split('/')[3]
     sig_config = SIGCWGAN_CONFIGS[key]
     return sig_config
 
@@ -172,7 +174,6 @@ def get_top_dirs(path):
 
 def evaluate_benchmarks(algos, base_dir, datasets, use_cuda=False):
     msg = 'Running evalution on GPU.' if use_cuda else 'Running evalution on CPU.'
-    print(msg)
     for dataset_dir in os.listdir(base_dir):
         dataset_path = os.path.join(base_dir, dataset_dir)
         if dataset_dir not in datasets:
@@ -185,7 +186,6 @@ def evaluate_benchmarks(algos, base_dir, datasets, use_cuda=False):
                 for algo_dir in get_top_dirs(seed_path):
                     if algo_dir not in algos:
                         continue
-                    print(dataset_dir, experiment_dir, algo_dir, )
                     algo_path = os.path.join(seed_path, algo_dir)
                     # evaluate the generator
                     experiment_summary = evaluate_generator(
@@ -211,4 +211,8 @@ if __name__ == '__main__':
     parser.add_argument('-datasets', default=['ARCH', 'STOCKS', 'ECG', 'VAR', ], nargs="+")
     parser.add_argument('-algos', default=['SigCWGAN', 'GMMN', 'RCGAN', 'TimeGAN', 'RCWGAN', ], nargs="+")
     args = parser.parse_args()
-    evaluate_benchmarks(base_dir=args.base_dir, use_cuda=args.use_cuda, datasets=args.datasets, algos=args.algos)
+    base_dir='./numerical_results'
+    use_cuda=True
+    datasets=['ARCH', 'STOCKS', 'VAR', ]
+    algos=['SigCWGAN', 'GMMN', 'RCGAN', 'TimeGAN', 'RCWGAN', ]
+    evaluate_benchmarks(base_dir=base_dir, use_cuda=use_cuda, datasets=datasets, algos=algos)

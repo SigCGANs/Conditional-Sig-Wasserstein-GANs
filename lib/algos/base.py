@@ -78,15 +78,24 @@ class BaseAlgo:
             axes[0].plot(self.training_loss['G_loss'], label='Generator loss')
             if algo in ['RCGAN', 'TimeGAN']:
                 axes[0].plot(self.training_loss['D_loss'], label='Discriminator loss')
-            elif algo == 'RCWGAN':
+            elif algo =='RCWGAN':
                 axes[0].plot(self.training_loss['D_loss'], label='Critic loss')
-                axes[0].plot(self.training_loss['RCWGAN_reg'], label='GP')
+                axes[0].plot(self.training_loss['reg'], label='GP')
         elif algo == 'GMMN':
             axes[0].plot(self.training_loss['MMD'], label='MMD')
         elif algo == 'SigCWGAN':
             loss = self.training_loss['loss']
             axes[0].plot(loss, label='Sig-$W_1$ loss')
             axes[0].set_yscale('log')
+        elif algo == 'MCWGAN_1':
+            loss = self.training_loss['loss']
+            axes[0].plot(loss, label='loss')
+            axes[0].plot(self.training_loss['Reg'],label='D_reg')
+            #axes[0].set_yscale('log')
+        elif algo== 'MCWGAN_2':
+                axes[0].plot(self.training_loss['G_loss'], label='Generator loss')
+                axes[0].plot(self.training_loss['D_loss'], label='Critic loss')
+                axes[0].plot(self.training_loss['reg'], label='GP',color='red')
         else:
             raise NotImplementedError('Algo "%s" not implemented' % algo)
         axes[0].grid()

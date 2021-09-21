@@ -148,7 +148,13 @@ class GAN(BaseAlgo):
         self.training_loss['G_loss'].append(G_loss)
         self.evaluate(x_fake)
 
-
+def sample_x_fake(G, q, sig_config, x_past):
+    x_past_mc = x_past.repeat(sig_config.mc_size, 1, 1).requires_grad_()
+    x_fake_mc = G.sample(q, x_past_mc)
+    #sigs_fake_future = sig_config.compute_sig_future(x_fake)
+    #sigs_fake_ce = sigs_fake_future.reshape(sig_config.mc_size, x_past.size(0), -1).mean(0)
+    return  x_fake_mc
+    
 class RCGAN(GAN,):
     def __init__(self, base_config, x_real):
         super(RCGAN, self).__init__(base_config, 'RCGAN', x_real)
@@ -162,3 +168,4 @@ class TimeGAN(GAN, ):
 class RCWGAN(GAN, ):
     def __init__(self, base_config, x_real):
         super(RCWGAN, self).__init__(base_config, 'RCWGAN', x_real)
+

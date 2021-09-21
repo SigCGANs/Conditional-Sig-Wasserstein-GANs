@@ -23,15 +23,14 @@ def get_algo_config(dataset, data_params):
     elif dataset == 'STOCKS':
         key += '_' + '_'.join(data_params['assets'])
     return SIGCWGAN_CONFIGS[key]
-
-
+    
 def set_seed(seed):
     torch.manual_seed(seed)
     np.random.seed(seed)
 
 
 def get_algo(algo_id, base_config, dataset, data_params, x_real):
-    if algo_id == 'SigCWGAN':
+    if algo_id in ['SigCWGAN','MCWGAN_1','MCWGAN_2']:
         algo_config = get_algo_config(dataset, data_params)
         algo = ALGOS[algo_id](x_real=x_real, config=algo_config, base_config=base_config)
     else:
@@ -99,9 +98,9 @@ def main(args):
     if not pt.exists('./data/oxfordmanrealizedvolatilityindices.csv'):
         print('Downloading Oxford MAN AHL realised library...')
         download_man_ahl_dataset()
-    if not pt.exists('./data/mitdb'):
-        print('Downloading MIT-ECG database...')
-        download_mit_ecg_dataset()
+    #if not pt.exists('./data/mitdb'):
+        #print('Downloading MIT-ECG database...')
+        #download_mit_ecg_dataset()
 
     print('Start of training. CUDA: %s' % args.use_cuda)
     for dataset in args.datasets:
@@ -124,7 +123,7 @@ def main(args):
                         data_params=data_params,
                         dataset=dataset,
                         base_dir=args.base_dir,
-                        spec=spec,
+                        spec=spec, 
                     )
 
 
@@ -137,15 +136,15 @@ if __name__ == '__main__':
     parser.add_argument('-use_cuda', action='store_true')
     parser.add_argument('-num_seeds', default=1, type=int)
     parser.add_argument('-initial_seed', default=0, type=int)
-    parser.add_argument('-datasets', default=['ARCH', 'STOCKS', 'ECG', 'VAR', ], nargs="+")
-    parser.add_argument('-algos', default=['SigCWGAN', 'GMMN', 'RCGAN', 'TimeGAN', 'RCWGAN', ], nargs="+")
+    parser.add_argument('-datasets', default=['VAR','STOCKS'], nargs="+")# 'VAR', 
+    parser.add_argument('-algos', default=['SigCWGAN', 'GMMN', 'RCGAN', 'TimeGAN', 'RCWGAN','MCWGAN_1'], nargs="+")
 
-    # Algo hyperparameters
+    # Algo hyperparameters  
     parser.add_argument('-batch_size', default=200, type=int)
     parser.add_argument('-p', default=3, type=int)
     parser.add_argument('-q', default=3, type=int)
     parser.add_argument('-hidden_dims', default=3 * (50,), type=tuple)
-    parser.add_argument('-total_steps', default=1000, type=int)
+    parser.add_argument('-total_steps', default=2000, type=int)
 
     args = parser.parse_args()
     main(args)
