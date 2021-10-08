@@ -5,6 +5,7 @@ from os import path as pt
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
+from sklearn.model_selection import train_test_split
 
 from hyperparameters import SIGCWGAN_CONFIGS
 from lib import ALGOS
@@ -51,18 +52,22 @@ def run(algo_id, base_config, base_dir, dataset, spec, data_params={}):
     # initialise dataset and algo
     x_real = get_data(dataset, base_config.p, base_config.q, **data_params)
     x_real = x_real.to(base_config.device)
-    algo = get_algo(algo_id, base_config, dataset, data_params, x_real)
+    x_real_train, x_real_test = train_test_split(x_real, train_size = 0.8)
+
+    algo = get_algo(algo_id, base_config, dataset, data_params, x_real_train)
     # Train the algorithm
     algo.fit()
     # create summary
-    create_summary(dataset, base_config.device, algo.G, base_config.p, base_config.q, x_real)
+    create_summary(dataset, base_config.device, algo.G, base_config.p, base_config.q, x_real_test)
     savefig('summary.png', experiment_directory)
-    x_fake = create_summary(dataset, base_config.device, algo.G, base_config.p, 8000, x_real, one=True)
+    x_fake = create_summary(dataset, base_config.device, algo.G, base_config.p, 8000, x_real_test, one=True)
     savefig('summary_long.png', experiment_directory)
     plt.plot(x_fake.cpu().numpy()[0, :2000])
     savefig('long_path.png', experiment_directory)
     # Pickle generator weights, real path and hyperparameters.
     pickle_it(x_real, pt.join(pt.dirname(experiment_directory), 'x_real.torch'))
+    pickle_it(x_real_test, pt.join(pt.dirname(experiment_directory), 'x_real_test.torch'))
+    pickle_it(x_real_train, pt.join(pt.dirname(experiment_directory), 'x_real_train.torch'))
     pickle_it(algo.training_loss, pt.join(experiment_directory, 'training_loss.pkl'))
     pickle_it(algo.G.to('cpu').state_dict(), pt.join(experiment_directory, 'G_weights.torch'))
     # Log some results at the end of training
@@ -99,9 +104,9 @@ def main(args):
     if not pt.exists('./data/oxfordmanrealizedvolatilityindices.csv'):
         print('Downloading Oxford MAN AHL realised library...')
         download_man_ahl_dataset()
-    if not pt.exists('./data/mitdb'):
-        print('Downloading MIT-ECG database...')
-        download_mit_ecg_dataset()
+    #if not pt.exists('./data/mitdb'):
+    #    print('Downloading MIT-ECG database...')
+    #    download_mit_ecg_dataset()
 
     print('Start of training. CUDA: %s' % args.use_cuda)
     for dataset in args.datasets:
@@ -115,6 +120,7 @@ def main(args):
                     p=args.p,
                     q=args.q,
                     total_steps=args.total_steps,
+                    mc_samples=1000,
                 )
                 generator = get_dataset_configuration(dataset)
                 for spec, data_params in generator:
@@ -138,7 +144,7 @@ if __name__ == '__main__':
     parser.add_argument('-num_seeds', default=1, type=int)
     parser.add_argument('-initial_seed', default=0, type=int)
     parser.add_argument('-datasets', default=['ARCH', 'STOCKS', 'ECG', 'VAR', ], nargs="+")
-    parser.add_argument('-algos', default=['SigCWGAN', 'GMMN', 'RCGAN', 'TimeGAN', 'RCWGAN', ], nargs="+")
+    parser.add_argument('-algos', default=['SigCWGAN', 'GMMN', 'RCGAN', 'TimeGAN', 'RCWGAN', 'CWGAN',], nargs="+")
 
     # Algo hyperparameters
     parser.add_argument('-batch_size', default=200, type=int)

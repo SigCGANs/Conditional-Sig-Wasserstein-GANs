@@ -85,7 +85,7 @@ def evaluate_generator(model_name, seed, experiment_dir, dataset, use_cuda=True)
     # ----------------------------------------------
     # Load and prepare real path.
     # ----------------------------------------------
-    x_real = load_pickle(os.path.join(os.path.dirname(experiment_dir), 'x_real.torch')).to(device)
+    x_real = load_pickle(os.path.join(os.path.dirname(experiment_dir), 'x_real_test.torch')).to(device)
     x_past, x_future = x_real[:, :p], x_real[:, p:p + q]
     x_future = x_real[:, p:p + q]
     dim = x_real.shape[-1]
