@@ -20,6 +20,7 @@ class BaseConfig:
     q: int = 3
     hidden_dims: Tuple[int] = 3 * (50,)
     total_steps: int = 1000
+    mc_samples: int = 1000
 
 
 def is_multivariate(x):
@@ -74,13 +75,13 @@ class BaseAlgo:
     def plot_losses(self):
         fig, axes = plt.subplots(len(self.test_metrics_list) + 1, 1, figsize=(10, 8))
         algo = type(self).__name__
-        if algo in ['RCGAN', 'TimeGAN', 'RCWGAN']:
+        if algo in ['RCGAN', 'TimeGAN', 'RCWGAN', 'CWGAN']:
             axes[0].plot(self.training_loss['G_loss'], label='Generator loss')
             if algo in ['RCGAN', 'TimeGAN']:
                 axes[0].plot(self.training_loss['D_loss'], label='Discriminator loss')
-            elif algo == 'RCWGAN':
+            elif algo in ['RCWGAN','CWGAN']:
                 axes[0].plot(self.training_loss['D_loss'], label='Critic loss')
-                axes[0].plot(self.training_loss['RCWGAN_reg'], label='GP')
+                axes[0].plot(self.training_loss['{}_reg'.format(algo)], label='GP')
         elif algo == 'GMMN':
             axes[0].plot(self.training_loss['MMD'], label='MMD')
         elif algo == 'SigCWGAN':

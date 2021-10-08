@@ -36,7 +36,6 @@ class CGANTrainer(object):
         self.G.train()
         self.G_optimizer.zero_grad()
         d_fake = self.D(x_fake)
-        self.D.train()
         gloss = self.compute_loss(d_fake, 1)
         if self.gan_algo == 'TimeGAN':
             gloss = gloss + torch.mean((x_fake - x_real) ** 2)
@@ -63,7 +62,7 @@ class CGANTrainer(object):
         dloss = dloss_fake + dloss_real
         dloss.backward()
 
-        if self.gan_algo == 'RCWGAN':
+        if self.gan_algo in ('RCWGAN', 'CWGAN'):
             reg = self.reg_param * self.wgan_gp_reg(x_real, x_fake)
             reg.backward()
         else:
@@ -79,8 +78,9 @@ class CGANTrainer(object):
         targets = d_out.new_full(size=d_out.size(), fill_value=target)
         if self.gan_algo in ['RCGAN', 'TimeGAN']:
             return torch.nn.functional.binary_cross_entropy_with_logits(d_out, targets)
-        elif self.gan_algo == 'RCWGAN':
+        elif self.gan_algo in ['RCWGAN', 'CWGAN']:
             return (2 * target - 1) * d_out.mean()
+
 
     def wgan_gp_reg(self, x_real, x_fake, center=1.):
         batch_size = x_real.size(0)
@@ -127,17 +127,22 @@ class GAN(BaseAlgo):
     def step(self):
         for i in range(self.D_steps_per_G_step):
             # generate x_fake
-            z = torch.randn(self.batch_size, self.q, self.latent_dim).to(self.device)
             indices = sample_indices(self.x_real.shape[0], self.batch_size)
             x_past = self.x_real[indices, :self.p].clone().to(self.device)
             with torch.no_grad():
-                x_fake = self.G(z, x_past.clone())
+                if self.gan_algo == 'CWGAN':
+                    x_past_mc = x_past.repeat(self.base_config.mc_samples, 1, 1)
+                    x_fake = self.G.sample(self.q, x_past_mc)
+                    x_fake = x_fake.reshape(self.base_config.mc_samples, x_past.shape[0], self.q, -1).mean(0)
+                else:
+                    x_fake = self.G.sample(self.q, x_past.clone())
                 x_fake = torch.cat([x_past, x_fake], dim=1)
             D_loss_real, D_loss_fake, reg = self.trainer.D_trainstep(x_fake, self.x_real[indices].to(self.device))
             if i == 0:
                 self.training_loss['D_loss_fake'].append(D_loss_fake)
                 self.training_loss['D_loss_real'].append(D_loss_real)
-                self.training_loss['RCWGAN_reg'].append(reg)
+                if self.gan_algo in ['RCWGAN', 'CWGAN']:
+                    self.training_loss['{}_reg'.format(self.gan_algo)].append(reg)
         # Generator step
         indices = sample_indices(self.x_real.shape[0], self.batch_size)
         x_past = self.x_real[indices, :self.p].clone().to(self.device)
@@ -162,3 +167,8 @@ class TimeGAN(GAN, ):
 class RCWGAN(GAN, ):
     def __init__(self, base_config, x_real):
         super(RCWGAN, self).__init__(base_config, 'RCWGAN', x_real)
+
+
+class CWGAN(GAN, ):
+    def __init__(self, base_config, x_real):
+        super(CWGAN, self).__init__(base_config, 'CWGAN', x_real)
