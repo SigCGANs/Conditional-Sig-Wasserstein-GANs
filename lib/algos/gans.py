@@ -18,6 +18,7 @@ class CGANTrainer(object):
             p,
             q,
             gan_algo,
+            base_config,
             reg_param: float = 10.
     ):
         self.G = G
@@ -30,6 +31,7 @@ class CGANTrainer(object):
 
         self.gan_algo = gan_algo
         self.reg_param = reg_param
+        self.base_config = base_config
 
     def G_trainstep(self, x_fake, x_real):
         toggle_grad(self.G, True)
@@ -84,8 +86,12 @@ class CGANTrainer(object):
 
     def wgan_gp_reg(self, x_real, x_fake, center=1.):
         batch_size = x_real.size(0)
+        if self.gan_algo == 'CWGAN':
+            x_fake_ = x_fake.reshape(self.base_config.mc_samples, batch_size, x_real.shape[1], -1).mean(0)
+        else:
+            x_fake_ = x_fake
         eps = torch.rand(batch_size, device=x_real.device).view(batch_size, 1, 1)
-        x_interp = (1 - eps) * x_real + eps * x_fake
+        x_interp = (1 - eps) * x_real + eps * x_fake_
         x_interp = x_interp.detach()
         x_interp.requires_grad_()
         d_out = self.D(x_interp)
@@ -121,7 +127,7 @@ class GAN(BaseAlgo):
         self.gan_algo = gan_algo
         self.trainer = CGANTrainer(  # central object to tune the GAN
             G=self.G, D=self.D, G_optimizer=self.G_optimizer, D_optimizer=self.D_optimizer,
-            gan_algo=gan_algo, p=self.p, q=self.q,
+            gan_algo=gan_algo, p=self.p, q=self.q, base_config=base_config
         )
 
     def step(self):
@@ -131,9 +137,9 @@ class GAN(BaseAlgo):
             x_past = self.x_real[indices, :self.p].clone().to(self.device)
             with torch.no_grad():
                 if self.gan_algo == 'CWGAN':
-                    x_past_mc = x_past.repeat(self.base_config.mc_samples, 1, 1)
-                    x_fake = self.G.sample(self.q, x_past_mc)
-                    x_fake = x_fake.reshape(self.base_config.mc_samples, x_past.shape[0], self.q, -1).mean(0)
+                    x_past = x_past.clone().repeat(self.base_config.mc_samples, 1, 1)
+                    x_fake = self.G.sample(self.q, x_past)
+                    #x_fake = x_fake.reshape(self.base_config.mc_samples, x_past.shape[0], self.q, -1).mean(0)
                 else:
                     x_fake = self.G.sample(self.q, x_past.clone())
                 x_fake = torch.cat([x_past, x_fake], dim=1)
