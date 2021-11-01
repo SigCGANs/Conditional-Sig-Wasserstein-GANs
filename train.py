@@ -52,7 +52,8 @@ def run(algo_id, base_config, base_dir, dataset, spec, data_params={}):
     # initialise dataset and algo
     x_real = get_data(dataset, base_config.p, base_config.q, **data_params)
     x_real = x_real.to(base_config.device)
-    x_real_train, x_real_test = train_test_split(x_real, train_size = 0.8)
+    ind_train = int(x_real.shape[0] * 0.8)
+    x_real_train, x_real_test = x_real[:ind_train], x_real[ind_train:] #train_test_split(x_real, train_size = 0.8)
 
     algo = get_algo(algo_id, base_config, dataset, data_params, x_real_train)
     # Train the algorithm
@@ -113,7 +114,7 @@ def main(args):
         for algo_id in args.algos:
             for seed in range(args.initial_seed, args.initial_seed + args.num_seeds):
                 base_config = BaseConfig(
-                    device='cuda' if args.use_cuda else 'cpu',
+                        device='cuda:{}'.format(args.device) if args.use_cuda and torch.cuda.is_available() else 'cpu',
                     seed=seed,
                     batch_size=args.batch_size,
                     hidden_dims=args.hidden_dims,
@@ -122,6 +123,7 @@ def main(args):
                     total_steps=args.total_steps,
                     mc_samples=1000,
                 )
+                set_seed(seed)
                 generator = get_dataset_configuration(dataset)
                 for spec, data_params in generator:
                     run(
@@ -141,10 +143,13 @@ if __name__ == '__main__':
     # Meta parameters
     parser.add_argument('-base_dir', default='./numerical_results', type=str)
     parser.add_argument('-use_cuda', action='store_true')
+    parser.add_argument('-device', default=1, type=int)
     parser.add_argument('-num_seeds', default=1, type=int)
     parser.add_argument('-initial_seed', default=0, type=int)
-    parser.add_argument('-datasets', default=['ARCH', 'STOCKS', 'ECG', 'VAR', ], nargs="+")
+    #parser.add_argument('-datasets', default=['ARCH', 'STOCKS', 'ECG', 'VAR', ], nargs="+")
+    parser.add_argument('-datasets', default=['STOCKS', 'ARCH', 'VAR', ], nargs="+")
     parser.add_argument('-algos', default=['SigCWGAN', 'GMMN', 'RCGAN', 'TimeGAN', 'RCWGAN', 'CWGAN',], nargs="+")
+
 
     # Algo hyperparameters
     parser.add_argument('-batch_size', default=200, type=int)
